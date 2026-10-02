@@ -1,0 +1,458 @@
+<!doctype html>
+<html lang="hi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ORF टाइमर – ODU कक्षा 2, राउंड 1</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Mukta:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --page: #E9EEF6;
+    --paper: #FFFFFF;
+    --ink: #1A2B5C;
+    --ink-soft: #5A6890;
+    --rule: #C7D4EA;
+    --red: #C62828;
+    --red-wash: #FDECEC;
+    --green: #17724A;
+    --green-wash: #E3F3EA;
+    --amber: #B86E00;
+    --muted-cell: #F0F2F6;
+    --muted-text: #A0A9BE;
+    --on-ink: #FFFFFF;
+    color-scheme: light;
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --page: #0E1526; --paper: #17203A; --ink: #E7ECF8; --ink-soft: #A5B1CF; --rule: #2C3A5D;
+      --red: #FF6F6F; --red-wash: #3B1E26; --green: #4CC38A; --green-wash: #15332A; --amber: #F2A93B;
+      --muted-cell: #121A2E; --muted-text: #5A6585; --on-ink: #0E1526; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --page: #0E1526; --paper: #17203A; --ink: #E7ECF8; --ink-soft: #A5B1CF; --rule: #2C3A5D;
+    --red: #FF6F6F; --red-wash: #3B1E26; --green: #4CC38A; --green-wash: #15332A; --amber: #F2A93B;
+    --muted-cell: #121A2E; --muted-text: #5A6585; --on-ink: #0E1526; color-scheme: dark;
+  }
+  *, *::before, *::after { box-sizing: inherit; }
+  html { scroll-padding-top: calc(env(safe-area-inset-top, 0px) + 150px); height: 100%; }
+  body {
+    margin: 0; min-height: 100%;
+    background: var(--page); color: var(--ink);
+    font-family: "Mukta", "Noto Sans Devanagari", "Nirmala UI", "Mangal", system-ui, sans-serif;
+    font-size: 17px; line-height: 1.5;
+    -webkit-text-size-adjust: 100%;
+  }
+  button { font: inherit; }
+
+  /* ---------- sticky timer bar ---------- */
+  .bar {
+    position: sticky; top: env(safe-area-inset-top, 0px); z-index: 10;
+    background: var(--paper);
+    border-bottom: 1px solid var(--rule);
+  }
+  .bar-inner {
+    max-width: 760px; margin: 0 auto; padding: 10px 14px 8px;
+    display: grid; grid-template-columns: auto 1fr; grid-template-areas: "clock btn" "status status";
+    align-items: center; column-gap: 14px; row-gap: 4px;
+  }
+  .clock {
+    grid-area: clock; font-size: 40px; font-weight: 800; line-height: 1;
+    font-variant-numeric: tabular-nums; letter-spacing: -0.5px; min-width: 3.1ch;
+  }
+  .bar.final .clock { color: var(--amber); }
+  .bar.over .clock { color: var(--ink-soft); }
+  .status { grid-area: status; min-height: 2.4em; }
+  .status p { margin: 0; }
+  #statusMain { font-weight: 600; font-size: 16px; line-height: 1.35; }
+  #statusSub { font-size: 14px; color: var(--ink-soft); line-height: 1.35; }
+  #mainBtn { grid-area: btn; justify-self: end; }
+  .drain { height: 6px; background: var(--rule); }
+  #drainFill { height: 100%; width: 100%; background: var(--ink); transform-origin: left center; }
+  .bar.final #drainFill { background: var(--amber); }
+
+  /* ---------- buttons ---------- */
+  .btn {
+    border: 2px solid var(--ink); border-radius: 12px; padding: 10px 18px; min-height: 52px;
+    font-weight: 600; font-size: 17px; line-height: 1.2; cursor: pointer;
+    background: var(--ink); color: var(--on-ink);
+    touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+  }
+  .btn.stop { background: var(--paper); color: var(--ink); }
+  .btn.all { background: var(--green); border-color: var(--green); color: var(--on-ink); }
+  .btn.quiet { background: transparent; color: var(--ink); border-color: var(--rule); }
+  .btn:focus-visible, .cell:focus-visible, summary:focus-visible { outline: 3px solid var(--amber); outline-offset: 2px; }
+  .btn:active { transform: translateY(1px); }
+
+  /* ---------- page ---------- */
+  main { max-width: 760px; margin: 0 auto; padding: 16px 14px 40px; }
+  h1 { font-size: 24px; font-weight: 800; margin: 4px 0 0; line-height: 1.25; }
+  .meta { margin: 2px 0 14px; color: var(--ink-soft); font-size: 15px; }
+
+  details.howto {
+    background: var(--paper); border: 1px solid var(--rule); border-radius: 12px; margin-bottom: 16px;
+  }
+  details.howto summary { cursor: pointer; padding: 12px 14px; font-weight: 600; list-style-position: inside; }
+  .howto-body { padding: 0 16px 14px; font-size: 15.5px; }
+  .howto-body h2 { font-size: 16px; margin: 10px 0 4px; }
+  .howto-body ol { margin: 0; padding-left: 1.3em; }
+  .howto-body li { margin-bottom: 4px; }
+  .say { border-left: 4px solid var(--ink); padding: 4px 0 4px 12px; margin: 6px 0 0; }
+
+  /* ---------- word sheet ---------- */
+  .sheet {
+    background: var(--paper); border: 1px solid var(--rule); border-radius: 12px; overflow: hidden;
+  }
+  .grid {
+    list-style: none; margin: 0; padding: 0;
+    display: grid; grid-template-columns: repeat(var(--cols, 6), minmax(0, 1fr));
+  }
+  .grid li { display: contents; }
+  .cell {
+    position: relative; width: 100%; min-height: 64px; padding: 16px 2px 8px; margin: 0;
+    background: transparent; color: var(--ink); border: 0;
+    border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule);
+    font-size: clamp(14px, 4.15vw, 25px); font-weight: 600; line-height: 1.25; white-space: nowrap;
+    cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+    transition: background-color .12s ease, color .12s ease;
+  }
+  .cell .n {
+    position: absolute; top: 4px; left: 6px; font-size: 11px; font-weight: 400; line-height: 1;
+    color: var(--ink-soft); font-variant-numeric: tabular-nums;
+  }
+  .cell .w { position: relative; z-index: 1; }
+  .cell.wrong { color: var(--red); background: var(--red-wash); }
+  .cell.wrong::after {
+    content: ""; position: absolute; left: 12%; right: 12%; top: 58%; height: 3px; border-radius: 2px;
+    background: var(--red); transform: rotate(-14deg); z-index: 2;
+  }
+  .cell.last { background: var(--green-wash); box-shadow: inset -5px 0 0 var(--green); }
+  .cell.last.wrong { background: var(--red-wash); }
+  .cell.last .n { color: var(--green); font-weight: 800; }
+  .cell.after { color: var(--muted-text); background: var(--muted-cell); }
+  .cell.after.wrong::after { background: var(--muted-text); }
+  .picking .cell:not(.after):hover { background: var(--green-wash); }
+
+  /* ---------- result ---------- */
+  .result {
+    margin-top: 18px; background: var(--paper); border: 2px solid var(--green); border-radius: 12px; padding: 14px 16px 16px;
+  }
+  .result h2 { margin: 0 0 10px; font-size: 18px; }
+  .figures { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .fig { border: 1px solid var(--rule); border-radius: 10px; padding: 10px 12px; }
+  .fig .num { display: block; font-size: 52px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
+  .fig.wrongs .num { color: var(--red); }
+  .fig .lbl { display: block; margin-top: 6px; font-weight: 600; font-size: 15px; line-height: 1.3; }
+  .fig .lbl small { display: block; font-weight: 400; color: var(--ink-soft); font-size: 13px; }
+  .extra { margin: 12px 0 0; font-size: 15px; }
+  .hint { margin: 4px 0 0; font-size: 14px; color: var(--ink-soft); }
+
+  .bottom { margin-top: 22px; display: flex; justify-content: center; }
+
+  .toast {
+    position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); z-index: 20;
+    transform: translateX(-50%); max-width: min(92vw, 520px);
+    background: var(--ink); color: var(--on-ink); padding: 10px 16px; border-radius: 10px;
+    font-size: 15px; line-height: 1.35; text-align: center;
+    opacity: 0; pointer-events: none; transition: opacity .2s ease;
+  }
+  .toast.show { opacity: 1; }
+
+  @media (max-width: 370px) {
+    main { padding-left: 8px; padding-right: 8px; }
+    .cell .n { left: 4px; font-size: 10px; }
+  }
+  @media (min-width: 640px) {
+    .bar-inner { grid-template-columns: auto 1fr auto; grid-template-areas: "clock status btn"; }
+    .cell { min-height: 76px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .cell, .toast { transition: none; }
+  }
+</style>
+</head>
+<body>
+
+<header class="bar" id="bar">
+  <div class="bar-inner">
+    <div class="clock" id="clock" aria-live="off">1:00</div>
+    <div class="status" aria-live="polite">
+      <p id="statusMain"></p>
+      <p id="statusSub"></p>
+    </div>
+    <button class="btn" id="mainBtn" type="button">शुरू करें</button>
+  </div>
+  <div class="drain" aria-hidden="true"><div id="drainFill"></div></div>
+</header>
+
+<main>
+  <h1>मौखिक पठन प्रवाह (ORF)</h1>
+  <p class="meta">ODU कक्षा 2, राउंड 1. कहानी में <span id="wordTotal">60</span> शब्द हैं, समय 1 मिनट।</p>
+
+  <details class="howto">
+    <summary>निर्देश देखें</summary>
+    <div class="howto-body">
+      <h2>आकलनकर्ता के लिए</h2>
+      <ol>
+        <li>बच्चे के सामने प्रपत्र में से कार्य 3 खोल कर रखें।</li>
+        <li>बच्चा पढ़ना शुरू करे, उसी समय "शुरू करें" दबाएँ।</li>
+        <li>बच्चे द्वारा गलत पढ़े गए या नहीं पढ़े गए शब्द पर टैप करें। गलती से टैप हो जाए तो दोबारा टैप करें।</li>
+        <li>यदि बच्चा 5 सेकंड से अधिक किसी शब्द पर अटकता है, तो उसे आगे पढ़ने को कहें और उस शब्द पर टैप करके गलत मार्क करें।</li>
+        <li>1 मिनट पूरा होने पर बच्चे ने जो आखिरी शब्द पढ़ा, उस पर टैप करें।</li>
+        <li>दोनों संख्याएँ Google Form में भरें।</li>
+      </ol>
+      <h2>बच्चे से कहें</h2>
+      <p class="say">(अपनी उंगली से शब्दों को बाएँ से दाएँ की ओर पढ़ने का इशारा करें)<br>
+      अब मैं आपको एक कहानी पढ़ने के लिए दूँगा। आपको कहानी को जल्दी-जल्दी लेकिन ध्यान से पढ़ना है। आप पढ़ना शुरू करो और आगे बढ़ो।</p>
+    </div>
+  </details>
+
+  <section class="sheet" aria-label="कहानी के शब्द">
+    <ol class="grid" id="grid"></ol>
+  </section>
+
+  <section class="result" id="result" hidden aria-live="polite">
+    <h2>Google Form में ये दोनों संख्याएँ भरें</h2>
+    <div class="figures">
+      <div class="fig">
+        <span class="num" id="rRead">0</span>
+        <span class="lbl">कुल पढ़े गए शब्द <small>Total words read</small></span>
+      </div>
+      <div class="fig wrongs">
+        <span class="num" id="rWrong">0</span>
+        <span class="lbl">कुल गलत शब्द <small>Total incorrect words</small></span>
+      </div>
+    </div>
+    <p class="extra" id="rExtra"></p>
+    <p class="hint">कोई निशान सुधारना हो तो उस शब्द पर टैप करें, संख्या अपने आप बदल जाएगी।</p>
+  </section>
+
+  <div class="bottom">
+    <button class="btn quiet" id="resetBtn" type="button">नए बच्चे के लिए शुरू से करें</button>
+  </div>
+</main>
+
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+(function () {
+  // ORF_1 paragraph from ODU_R1_Competencies.xlsx (the dash in "तरह – तरह" is not counted as a word)
+  var PARAGRAPH = "सुमन और सुनीता दो सहेलियां थी। रविवार को दोनों मेला देखने गये। मेले में तरह – तरह के सामान बिक रहे थे। सुमन ने एक गाड़ी खरीदी। सुनीता ने गुब्बारा खरीदा। रास्ते में गुब्बारा हाथ से छूटकर उड़ गया। सुमन हँसने लगी और सुनीता रोने लगी। उसे रोते देख सुमन ने गुब्बारा खरीद के दिया। तब सुनीता भी खुश हो गयी।";
+  var COLS = 6;           // words per row
+  var DURATION = 60000;   // 1 minute
+
+  var WORDS = PARAGRAPH.split(/\s+/).filter(function (w) { return w && !/^[–—-]+$/.test(w); });
+  var N = WORDS.length;
+
+  var bar = document.getElementById("bar");
+  var clock = document.getElementById("clock");
+  var drain = document.getElementById("drainFill");
+  var mainBtn = document.getElementById("mainBtn");
+  var statusMain = document.getElementById("statusMain");
+  var statusSub = document.getElementById("statusSub");
+  var grid = document.getElementById("grid");
+  var result = document.getElementById("result");
+  var toastEl = document.getElementById("toast");
+
+  document.getElementById("wordTotal").textContent = N;
+  grid.style.setProperty("--cols", COLS);
+
+  var state = "ready";      // ready | running | pick | done
+  var wrong = new Set();
+  var last = null;          // index of last word read
+  var startT = 0, timer = null, elapsedMs = 0;
+  var audioCtx = null;
+
+  // build grid
+  var cells = WORDS.map(function (w, i) {
+    var li = document.createElement("li");
+    var b = document.createElement("button");
+    b.type = "button";
+    b.className = "cell";
+    b.setAttribute("aria-label", (i + 1) + ". " + w);
+    b.setAttribute("aria-pressed", "false");
+    b.innerHTML = '<span class="n">' + (i + 1) + '</span><span class="w"></span>';
+    b.querySelector(".w").textContent = w;
+    b.addEventListener("click", function () { onCell(i); });
+    li.appendChild(b);
+    grid.appendChild(li);
+    return b;
+  });
+
+  function fmt(ms) {
+    var s = Math.ceil(ms / 1000);
+    return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0");
+  }
+
+  var toastTimer = null;
+  function toast(msg) {
+    toastEl.textContent = msg;
+    toastEl.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { toastEl.classList.remove("show"); }, 2600);
+  }
+
+  function beep() {
+    try {
+      if (!audioCtx) return;
+      var o = audioCtx.createOscillator(), g = audioCtx.createGain();
+      o.type = "sine"; o.frequency.value = 880;
+      g.gain.setValueAtTime(0.0001, audioCtx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.4, audioCtx.currentTime + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.6);
+      o.connect(g); g.connect(audioCtx.destination);
+      o.start(); o.stop(audioCtx.currentTime + 0.65);
+    } catch (e) {}
+    if (navigator.vibrate) { try { navigator.vibrate([250, 120, 250]); } catch (e) {} }
+  }
+
+  function tick() {
+    var el = performance.now() - startT;
+    var left = Math.max(0, DURATION - el);
+    clock.textContent = fmt(left);
+    drain.style.transform = "scaleX(" + (left / DURATION) + ")";
+    bar.classList.toggle("final", left <= 10000 && left > 0);
+    if (left <= 0) {
+      elapsedMs = DURATION;
+      stopTimer();
+      beep();
+      goPick(true);
+    }
+  }
+
+  function stopTimer() {
+    if (timer) { clearInterval(timer); timer = null; }
+  }
+
+  function start() {
+    try {
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (AC && !audioCtx) audioCtx = new AC();
+      if (audioCtx && audioCtx.state === "suspended") audioCtx.resume();
+    } catch (e) {}
+    state = "running";
+    startT = performance.now();
+    timer = setInterval(tick, 100);
+    tick();
+    render();
+  }
+
+  function goPick(timeUp) {
+    state = "pick";
+    last = null;
+    bar.classList.remove("final");
+    bar.classList.add("over");
+    if (timeUp) clock.textContent = "0:00";
+    render(timeUp);
+  }
+
+  function setLast(i) {
+    last = i;
+    state = "done";
+    render();
+    result.hidden = false;
+    result.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "nearest" });
+  }
+
+  function onCell(i) {
+    if (state === "ready") { toast("पहले \"शुरू करें\" दबाएँ, फिर गलत शब्द पर टैप करें।"); return; }
+    if (state === "running") {
+      if (wrong.has(i)) wrong.delete(i); else wrong.add(i);
+      render();
+      return;
+    }
+    if (state === "pick") { setLast(i); return; }
+    if (state === "done") {
+      if (i > last) { toast("यह शब्द आखिरी पढ़े गए शब्द के बाद है। आखिरी शब्द बदलने के लिए ऊपर का बटन दबाएँ।"); return; }
+      if (wrong.has(i)) wrong.delete(i); else wrong.add(i);
+      render();
+    }
+  }
+
+  function counts() {
+    var read = last === null ? 0 : last + 1;
+    var w = 0;
+    wrong.forEach(function (i) { if (last !== null && i <= last) w++; });
+    return { read: read, wrong: w, correct: read - w };
+  }
+
+  function render(timeUp) {
+    cells.forEach(function (c, i) {
+      var isWrong = wrong.has(i);
+      c.classList.toggle("wrong", isWrong);
+      c.setAttribute("aria-pressed", isWrong ? "true" : "false");
+      c.classList.toggle("last", state === "done" && i === last);
+      c.classList.toggle("after", state === "done" && i > last);
+    });
+    grid.classList.toggle("picking", state === "pick");
+    mainBtn.classList.remove("stop", "all", "quiet");
+
+    if (state === "ready") {
+      mainBtn.textContent = "शुरू करें";
+      statusMain.textContent = "बच्चा पढ़ना शुरू करे, तब “शुरू करें” दबाएँ।";
+      statusSub.textContent = "Start the timer when the child starts reading.";
+      result.hidden = true;
+    } else if (state === "running") {
+      mainBtn.textContent = "जल्दी रोकें";
+      mainBtn.classList.add("stop");
+      statusMain.textContent = "गलत या छोड़े गए शब्द पर टैप करें। (" + wrong.size + " गलत)";
+      statusSub.textContent = "दोबारा टैप करने से निशान हट जाएगा। Tap again to undo.";
+    } else if (state === "pick") {
+      mainBtn.textContent = "सारे " + N + " शब्द पढ़े";
+      mainBtn.classList.add("all");
+      statusMain.textContent = (timeUp ? "समय पूरा! " : "") + "बच्चे ने जो आखिरी शब्द पढ़ा, उस पर टैप करें।";
+      statusSub.textContent = "Tap the last word the child read.";
+      result.hidden = true;
+    } else if (state === "done") {
+      var k = counts();
+      mainBtn.textContent = "आखिरी शब्द बदलें";
+      mainBtn.classList.add("quiet");
+      statusMain.textContent = "पढ़े गए शब्द " + k.read + ", गलत " + k.wrong + "। ये Google Form में भरें।";
+      statusSub.textContent = "Enter both numbers in the Google Form.";
+      document.getElementById("rRead").textContent = k.read;
+      document.getElementById("rWrong").textContent = k.wrong;
+      var secs = Math.round(elapsedMs / 1000);
+      document.getElementById("rExtra").textContent =
+        "सही पढ़े गए शब्द: " + k.correct + "। समय: " + secs + " सेकंड।";
+    }
+  }
+
+  mainBtn.addEventListener("click", function () {
+    if (state === "ready") start();
+    else if (state === "running") {
+      elapsedMs = Math.min(DURATION, performance.now() - startT);
+      stopTimer();
+      goPick(false);
+    } else if (state === "pick") setLast(N - 1);
+    else if (state === "done") goPick(false);
+  });
+
+  function reset() {
+    stopTimer();
+    state = "ready"; wrong.clear(); last = null; elapsedMs = 0;
+    bar.classList.remove("final", "over");
+    clock.textContent = fmt(DURATION);
+    drain.style.transform = "scaleX(1)";
+    render();
+    window.scrollTo({ top: 0 });
+  }
+
+  document.getElementById("resetBtn").addEventListener("click", function () {
+    if (state !== "ready" && !confirm("इस बच्चे का ORF मिटाकर नए बच्चे के लिए शुरू करें?")) return;
+    reset();
+  });
+
+  window.addEventListener("beforeunload", function (e) {
+    if (state === "running" || state === "pick") { e.preventDefault(); e.returnValue = ""; }
+  });
+
+  reset();
+})();
+</script>
+</body>
+</html>
